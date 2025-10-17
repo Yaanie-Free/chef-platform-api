@@ -8,6 +8,20 @@ const { createClient } = require('@supabase/supabase-js');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
+const winston = require('winston');
+const prometheus = require('prom-client');
+const crypto = require('crypto');
+
+let redisClient = null;
+if (process.env.REDIS_URL) {
+  try {
+    const redis = require('redis');
+    redisClient = redis.createClient({ url: process.env.REDIS_URL });
+    redisClient.connect().then(() => console.log('✅ Redis connected')).catch(() => console.warn('⚠️ Redis connection failed'));
+  } catch (err) {
+    console.warn('Redis not available:', err.message);
+  }
+}
 const rateLimit = require('express-rate-limit');
 const { body, validationResult } = require('express-validator');
 const path = require('path');
@@ -111,6 +125,112 @@ app.use(helmet({
       objectSrc: ["'none'"],
       upgradeInsecureRequests: []
     }
+  },
+  crossOriginEmbedderPolicy: false
+}));
+
+// Compression with sensible defaults and opt-out header
+app.use(compression({
+  level: 6,
+  threshold: 1024,
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  }
+}));
+
+// CORS
+app.use(cors({
+  origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+}));
+
+// Rate limiting will be applied to API routes later
+
+// Winston logger
+const logger = winston.createLogger({
+  level: process.env.LOG_LEVEL || 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'logs/combined.log' }),
+    new winston.transports.Console({ format: winston.format.simple() })
+  ]
+});
+
+// Request ID middleware for tracing
+app.use((req, res, next) => {
+  req.id = crypto.randomUUID();
+  res.setHeader('X-Request-ID', req.id);
+  next();
+});
+
+// Performance monitoring
+const register = new prometheus.Registry();
+prometheus.collectDefaultMetrics({ register });
+
+const httpRequestDuration = new prometheus.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'Duration of HTTP requests in seconds',
+  labelNames: ['method', 'route', 'status_code'],
+  buckets: [0.1, 0.3, 0.5, 0.7, 1, 3, 5]
+});
+
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = (Date.now() - start) / 1000;
+    httpRequestDuration.labels(req.method, req.route ? req.route.path : req.path, res.statusCode).observe(duration);
+    const logData = { method: req.method, url: req.originalUrl, statusCode: res.statusCode, durationMs: Date.now() - start, requestId: req.id };
+    if (res.statusCode >= 500) logger.error('request_failed', logData);
+    else if (res.statusCode >= 400) logger.warn('request_warning', logData);
+    else logger.info('request_success', logData);
+  });
+  next();
+});
+
+// Simple Redis response cache middleware (optional)
+const cacheMiddleware = (duration = 300) => {
+  return async (req, res, next) => {
+    if (!redisClient) return next();
+    try {
+      const key = `cache:${req.originalUrl}`;
+      const cached = await redisClient.get(key);
+      if (cached) {
+        res.setHeader('X-Cache', 'HIT');
+        return res.json(JSON.parse(cached));
+      }
+      res.sendResponse = res.json;
+      res.json = (body) => {
+        redisClient.setEx(key, duration, JSON.stringify(body)).catch(err => logger.warn('redis_set_failed', { err: err.message }));
+        res.setHeader('X-Cache', 'MISS');
+        res.sendResponse(body);
+      };
+      next();
+    } catch (err) {
+      logger.warn('cache_error', { err: err.message });
+      next();
+    }
+  };
+};
+
+// --- Ensure upload directory exists ---
+const UPLOAD_DIR = path.join(__dirname, 'uploads');
+const PROFILE_IMAGES_DIR = path.join(UPLOAD_DIR, 'profile_images');
+if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+if (!fs.existsSync(PROFILE_IMAGES_DIR)) fs.mkdirSync(PROFILE_IMAGES_DIR, { recursive: true });
+
+// --- Multer Storage Configuration ---
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, PROFILE_IMAGES_DIR);
+>>>>>>> e50b83c (commit)
   },
   crossOriginEmbedderPolicy: false
 }));
@@ -319,6 +439,218 @@ app.get('/health', (req, res) => {
 });
 
 // Enhanced public routes
+app.get('/test', (req, res) => {
+  res.json({ 
+    message: 'Private Chef Platform API is working!', 
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    env: process.env.NODE_ENV || 'development'
+  });
+});
+      logger.error('fetch_dietary_options_failed', { error: error.message });
+      return res.status(500).json({ error: 'Failed to fetch dietary options.' });
+    }
+
+    res.json(data || []);
+  } catch (error) {
+    logger.error('fetch_dietary_options_exception', { error: error.message });
+    res.status(500).json({ error: 'Failed to fetch dietary options.' });
+  }
+});
+
+// Metrics endpoint for Prometheus
+app.get('/metrics', async (req, res) => {
+  try {
+    res.set('Content-Type', register.contentType);
+    res.end(await register.metrics());
+  } catch (err) {
+    logger.error('metrics_error', { err: err.message });
+    res.status(500).send('Failed to collect metrics');
+  }
+});
+
+// Enhanced health check with database and memory/cpu checks
+app.get('/health', async (req, res) => {
+  const healthCheck = {
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
+    checks: {}
+  };
+
+  try {
+    const { data, error } = await supabase.from('dietary_options').select('id').limit(1);
+    healthCheck.checks.database = error ? 'FAIL' : 'OK';
+  } catch (err) {
+    healthCheck.checks.database = 'FAIL';
+  }
+
+  const memUsage = process.memoryUsage();
+  healthCheck.checks.memory = { used: Math.round(memUsage.heapUsed / 1024 / 1024) + 'MB', total: Math.round(memUsage.heapTotal / 1024 / 1024) + 'MB' };
+  healthCheck.checks.cpu = process.cpuUsage();
+
+  const statusCode = healthCheck.status === 'OK' ? 200 : 503;
+  res.status(statusCode).json(healthCheck);
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  logger.error('unhandled_error', { error: err.message, stack: err.stack, requestId: req.id });
+  const isDevelopment = process.env.NODE_ENV === 'development';
+
+  if (err.name === 'ValidationError') {
+    return res.status(400).json({ error: 'Validation failed', details: isDevelopment ? err.details : 'Invalid input' });
+  }
+
+  if (err.name === 'UnauthorizedError') {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+
+  res.status(500).json({ error: 'Internal server error', message: isDevelopment ? err.message : 'Something went wrong' });
+});
+
+// --- PUBLIC ENDPOINTS ---
+
+// Get dietary options
+app.get('/api/dietary-options', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('dietary_options')
+      .select('*')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching dietary options:', error);
+      return res.status(500).json({ error: 'Failed to fetch dietary options.' });
+    }
+
+    res.json(data || []);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Failed to fetch dietary options.' });
+  }
+});
+
+// Get cuisine categories
+app.get('/api/cuisines', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('cuisine_categories')
+      .select('*')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching cuisine categories:', error);
+      return res.status(500).json({ error: 'Failed to fetch cuisine categories.' });
+    }
+
+    res.json(data || []);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Failed to fetch cuisine categories.' });
+  }
+});
+
+// Get South African cities/regions
+app.get('/api/regions', (req, res) => {
+  const southAfricanCities = [
+    'Cape Town', 'Johannesburg', 'Durban', 'Pretoria', 'Port Elizabeth',
+    'Bloemfontein', 'East London', 'Pietermaritzburg', 'Nelspruit', 'Kimberley',
+    'Polokwane', 'Rustenburg', 'Witbank', 'Klerksdorp', 'Welkom'
+  ];
+  
+  res.json(southAfricanCities.sort());
+});
+
+// Search chefs by location and dietary requirements
+app.get('/api/chefs/search', async (req, res) => {
+  try {
+    const { city, dietary_requirements, party_size, event_date } = req.query;
+    
+    let query = supabase
+      .from('chefs')
+      .select(`
+        id, name, surname, bio, regions_served, max_travel_distance,
+        dietary_specialties, profile_images, average_rating, total_reviews,
+        holiday_rate_multiplier, created_at
+      `);
+
+    // Filter by city if provided
+    if (city) {
+      query = query.contains('regions_served', [city]);
+    }
+
+    // Filter by dietary requirements if provided
+    if (dietary_requirements) {
+      const dietaryArray = Array.isArray(dietary_requirements) 
+        ? dietary_requirements 
+        : dietary_requirements.split(',');
+      
+      query = query.overlaps('dietary_specialties', dietaryArray);
+    }
+
+    const { data: chefs, error } = await query;
+
+    if (error) {
+      console.error('Error searching chefs:', error);
+      return res.status(500).json({ error: 'Failed to search chefs.' });
+    }
+
+    // Process chef data
+    const processedChefs = (chefs || []).map(chef => ({
+      ...chef,
+      average_rating: chef.total_reviews >= 5 ? chef.average_rating : null,
+      display_rating: chef.total_reviews >= 5,
+      profile_image: chef.profile_images && chef.profile_images.length > 0 
+        ? chef.profile_images[0].url 
+        : null
+    }));
+
+    res.json(processedChefs);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Failed to search chefs.' });
+  }
+});
+
+// Get chef profile
+app.get('/api/chefs/:id', async (req, res) => {
+  try {
+    const chefId = parseInt(req.params.id);
+    
+    const { data: chef, error } = await supabase
+      .from('chefs')
+      .select(`
+        id, name, surname, bio, work_history, regions_served, 
+        max_travel_distance, dietary_specialties, profile_images, 
+        average_rating, total_reviews, holiday_rate_multiplier, created_at
+      `)
+      .eq('id', chefId)
+      .single();
+
+    if (error || !chef) {
+      return res.status(404).json({ error: 'Chef not found.' });
+    }
+
+    // Process chef data
+    const processedChef = {
+      ...chef,
+      average_rating: chef.total_reviews >= 5 ? chef.average_rating : null,
+      display_rating: chef.total_reviews >= 5
+    };
+
+    res.json(processedChef);
+  } catch (error) {
+    console.error('Error:', error);
+    res.status(500).json({ error: 'Failed to fetch chef profile.' });
+  }
+});
+
+// --- AUTHENTICATION ENDPOINTS ---
+
+// Register customer
+>>>>>>> e50b83c (commit)
 app.post('/api/auth/customers/register', [
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 8 }).matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/),
