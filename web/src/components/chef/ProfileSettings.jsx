@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useRef } from 'react';
 import { User, Mail, Phone, MapPin, Upload, DollarSign, Award, Utensils, Save } from 'lucide-react';
 import { Card } from '../ui/card';
