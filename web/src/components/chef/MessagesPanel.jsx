@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from 'react';
 import { Search, MessageSquare, Send, Paperclip, MoreVertical } from 'lucide-react';
 import { Card } from '../ui/card';

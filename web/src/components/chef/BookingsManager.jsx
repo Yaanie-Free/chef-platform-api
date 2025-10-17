@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from 'react';
 import { Calendar as CalendarIcon, Clock, Users, MapPin, Check, X, Phone, Mail } from 'lucide-react';
 import { Card } from '../ui/card';
