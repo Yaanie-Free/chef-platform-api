@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev -p 3000",
-    "build": "next build",
+    "tokens:build": "style-dictionary build --config style-dictionary.config.cjs",
+    "tokens:watch": "style-dictionary build --config style-dictionary.config.cjs --watch",
+    "dev": "concurrently -k -r \"npm:tokens:watch\" \"next dev -p 3000\"",
+    "build": "npm run tokens:build && next build",
     "start": "next start -p 3000",
     "lint": "eslint"
   },
@@ -43,8 +45,10 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "concurrently": "^9.2.1",
     "eslint": "^9",
     "eslint-config-next": "15.5.6",
+    "style-dictionary": "^3.9.2",
     "tailwindcss": "^4"
   },
   "type": "module"

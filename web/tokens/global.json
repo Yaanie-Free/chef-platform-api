@@ -1,0 +1,12 @@
+{
+  "color": {
+    "background": { "value": "#ffffff" },
+    "foreground": { "value": "#171717" }
+  },
+  "font": {
+    "family": {
+      "sans": { "value": "var(--font-geist-sans)" },
+      "mono": { "value": "var(--font-geist-mono)" }
+    }
+  }
+}
