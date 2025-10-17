@@ -11,6 +11,10 @@ const compression = require('compression');
 const winston = require('winston');
 const prometheus = require('prom-client');
 const crypto = require('crypto');
+const rateLimitRedis = require('rate-limit-redis');
+const { createRateLimiter } = require('./lib/rateLimit');
+const { loggerConfig } = require('./lib/logger');
+const { setupSocketHandlers } = require('./lib/socketHandlers');
 
 let redisClient = null;
 if (process.env.REDIS_URL) {
