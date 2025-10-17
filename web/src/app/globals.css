@@ -1,5 +1,6 @@
-@import "tailwindcss";
-@import "../styles/tokens.css";
+import "tailwindcss";
+cursor/integrate-figma-designs-and-install-dependencies-808e
+import"../styles/tokens.css";
 
 /* Base fallbacks; overridden by tokens.css if present */
 :root {
@@ -12,6 +13,18 @@
   --color-foreground: var(--color-foreground);
   --font-sans: var(--font-family-sans);
   --font-mono: var(--font-family-mono);
+  
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+main
 }
 
 @media (prefers-color-scheme: dark) {
