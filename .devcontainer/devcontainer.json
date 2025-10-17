@@ -1,0 +1,20 @@
+{
+  "name": "chef-web",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+  "postCreateCommand": "npm ci --prefix web",
+  "postStartCommand": "npm run dev --prefix web",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bradlc.vscode-tailwindcss",
+        "dbaeumer.vscode-eslint",
+        "Figma.figmaslashvscode"
+      ]
+    }
+  },
+  "forwardPorts": [3000]
+}
