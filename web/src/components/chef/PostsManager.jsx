@@ -1,3 +1,4 @@
+"use client";
 import React, { useState, useRef } from 'react';
 import { Plus, Image as ImageIcon, X, Heart, MessageCircle, Eye } from 'lucide-react';
 import { Card } from '../ui/card';
