@@ -2,25 +2,13 @@ import { Heart, Star, Calendar, DollarSign, TrendingUp, Users, Eye } from 'lucid
 import { Card } from '../ui/card';
 import { Badge } from '../ui/badge';
 
-interface DashboardStatsProps {
-  data: {
-    totalLikes: number;
-    totalReviews: number;
-    averageRating: number;
-    totalBookings: number;
-    upcomingBookings: number;
-    completedBookings: number;
-    totalRevenue: number;
-    monthlyRevenue: number;
-    totalPosts: number;
-    profileViews: number;
-  };
-}
+// The interface DashboardStatsProps is removed.
 
-export function DashboardStats({ data }: DashboardStatsProps) {
+export function DashboardStats({ data }) {
   const stats = [
     {
       label: 'Profile views',
+      // Type annotation removed from value property
       value: data.profileViews.toLocaleString(),
       icon: Eye,
       change: '+12%',
@@ -74,6 +62,8 @@ export function DashboardStats({ data }: DashboardStatsProps) {
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {stats.map((stat, index) => {
+          // Type annotation is not strictly needed here, but can be written as:
+          // const Icon = stat.icon;
           const Icon = stat.icon;
           return (
             <Card key={index} className="p-6 rounded-3xl border-border/40 hover:border-border transition-all duration-200">

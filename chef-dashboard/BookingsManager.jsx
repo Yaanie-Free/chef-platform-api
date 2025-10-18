@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Calendar, Clock, Users, MapPin, Check, X, Phone, Mail } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Button } from '../ui/button';
@@ -6,11 +6,8 @@ import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 
-interface BookingsManagerProps {
-  chefData: any;
-}
-
-export function BookingsManager({ chefData }: BookingsManagerProps) {
+// Interface BookingsManagerProps is removed.
+export function BookingsManager({ chefData }) {
   const [bookingFilter, setBookingFilter] = useState('upcoming');
 
   // Mock bookings data
@@ -68,7 +65,8 @@ export function BookingsManager({ chefData }: BookingsManagerProps) {
     }
   ];
 
-  const getStatusColor = (status: string) => {
+  // Type annotation removed from the status argument
+  const getStatusColor = (status) => {
     switch (status) {
       case 'confirmed':
         return 'bg-green-500/10 text-green-500';
