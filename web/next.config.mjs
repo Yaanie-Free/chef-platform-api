@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  env: {
+    CUSTOM_KEY: 'development'
+  },
   // Performance optimizations
   experimental: {
     optimizeCss: true,
