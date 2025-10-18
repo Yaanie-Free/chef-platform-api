@@ -32,7 +32,6 @@ const path = require('path');
 const fs = require('fs');
 const sizeOf = require('image-size');
 const DOMPurify = require('isomorphic-dompurify');
-const winston = require('winston');
 const { promisify } = require('util');
 const cluster = require('cluster');
 const os = require('os');
