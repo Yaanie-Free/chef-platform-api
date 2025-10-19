@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  env: {
-    CUSTOM_KEY: 'development'
+  output: 'standalone',
+  images: {
+    domains: ['images.unsplash.com', 'res.cloudinary.com'],
   },
   // Performance optimizations
   experimental: {
