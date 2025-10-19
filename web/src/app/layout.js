@@ -1,23 +1,15 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
-import ResponsiveNavigation from '@/components/navigation/ResponsiveNavigation';
-import { AuthProvider } from '@/components/auth/AuthProvider';
-import { ChatProvider } from '@/components/chat/ChatProvider';
-import { PaymentProvider } from '@/components/payment/PaymentProvider';
-import { NotificationProvider } from '@/components/notifications/NotificationProvider';
-import { Toaster } from 'react-hot-toast';
 
 const inter = Inter({ 
   subsets: ['latin'],
   display: 'swap',
-  variable: '--font-inter'
 });
 
 export const metadata = {
   title: 'ChefConnect - Private Chef Platform',
-  description: 'Connect with top-rated private chefs in South Africa. Experience fine dining in the comfort of your own home.',
-  keywords: 'private chef, catering, fine dining, South Africa, chef booking',
-  authors: [{ name: 'ChefConnect Team' }],
+  description: 'Connect with top-rated private chefs in South Africa',
+}
   viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#ffffff' },

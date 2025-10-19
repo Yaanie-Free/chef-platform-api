@@ -8,6 +8,34 @@ module.exports = {
   ],
   theme: {
     extend: {
+      colors: {
+        primary: {
+          DEFAULT: '#FF6B35',
+          50: '#FFF3EE',
+          100: '#FFE1D4',
+          200: '#FFB499',
+          300: '#FF8E66',
+          400: '#FF6B35',
+          500: '#FF4A03',
+          600: '#D13A00',
+          700: '#9F2C00',
+          800: '#6D1E00',
+          900: '#3B1000'
+        },
+        secondary: {
+          DEFAULT: '#2EC4B6',
+          50: '#E6F7F5',
+          100: '#C5EEE9',
+          200: '#8AE0D6',
+          300: '#56D1C3',
+          400: '#2EC4B6',
+          500: '#249C91',
+          600: '#1B746C',
+          700: '#134E47',
+          800: '#0B2A26',
+          900: '#041211'
+        }
+      },
       screens: {
         'xs': '320px',
         'sm': '640px',
@@ -16,8 +44,7 @@ module.exports = {
         'xl': '1280px',
         '2xl': '1536px',
         '3xl': '1920px',
-        '4xl': '2560px',
-        // Custom breakpoints for specific use cases
+        '4xl': '2560px'
         'mobile': {'max': '767px'},
         'tablet': {'min': '768px', 'max': '1023px'},
         'laptop': {'min': '1024px', 'max': '1279px'},
